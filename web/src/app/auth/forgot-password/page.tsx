@@ -13,12 +13,15 @@ import { TextFormField } from "@/components/Field";
 import { toast } from "@/hooks/useToast";
 import { Spinner } from "@/components/Spinner";
 import { redirect } from "next/navigation";
-import { NEXT_PUBLIC_FORGOT_PASSWORD_ENABLED } from "@/lib/constants";
+import {
+  NEXT_PUBLIC_FORGOT_PASSWORD_ENABLED,
+  NEXT_PUBLIC_USE_USERNAME_AUTH,
+} from "@/lib/constants";
 
 const ForgotPasswordPage: React.FC = () => {
   const [isWorking, setIsWorking] = useState(false);
 
-  if (!NEXT_PUBLIC_FORGOT_PASSWORD_ENABLED) {
+  if (!NEXT_PUBLIC_FORGOT_PASSWORD_ENABLED || NEXT_PUBLIC_USE_USERNAME_AUTH) {
     redirect("/auth/login");
   }
 

@@ -8,6 +8,7 @@ export interface UserGroupInfo {
 export interface UserRow {
   id: string | null;
   email: string;
+  username?: string | null;
   role: UserRole | null;
   status: UserStatus;
   is_active: boolean;

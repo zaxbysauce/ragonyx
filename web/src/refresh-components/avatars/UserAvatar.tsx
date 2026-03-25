@@ -15,7 +15,8 @@ export default function UserAvatar({
 }: UserAvatarProps) {
   const initials = getUserInitials(
     user.personalization?.name ?? null,
-    user.email
+    user.email,
+    user.username
   );
 
   if (!initials) {

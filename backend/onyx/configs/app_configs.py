@@ -119,6 +119,10 @@ PASSWORD_REQUIRE_SPECIAL_CHAR = (
     os.environ.get("PASSWORD_REQUIRE_SPECIAL_CHAR", "false").lower() == "true"
 )
 
+USE_USERNAME_AUTH: bool = os.environ.get("USE_USERNAME_AUTH", "true").lower() == "true"
+# When True, users log in with username instead of email.
+# Email column is still populated with <username>@local.invalid for framework compat.
+
 # Encryption key secret is used to encrypt connector credentials, api keys, and other sensitive
 # information. This provides an extra layer of security on top of Postgres access controls
 # and is available in Onyx EE

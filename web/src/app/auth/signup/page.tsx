@@ -13,7 +13,7 @@ import ReferralSourceSelector from "./ReferralSourceSelector";
 import AuthErrorDisplay from "@/components/auth/AuthErrorDisplay";
 import Text from "@/refresh-components/texts/Text";
 import { cn } from "@/lib/utils";
-import { AuthType } from "@/lib/constants";
+import { AuthType, NEXT_PUBLIC_USE_USERNAME_AUTH } from "@/lib/constants";
 
 const Page = async (props: {
   searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -58,6 +58,30 @@ const Page = async (props: {
   let authUrl: string | null = null;
   if (cloud && authTypeMetadata) {
     authUrl = await getAuthUrlSS(authTypeMetadata.authType, null);
+  }
+
+  if (NEXT_PUBLIC_USE_USERNAME_AUTH) {
+    return (
+      <AuthFlowContainer authState="signup">
+        <div className="flex w-full flex-col justify-start gap-6">
+          <div className="w-full">
+            <Text as="p" headingH2 text05>
+              Self-Registration Disabled
+            </Text>
+            <Text as="p" text03>
+              Account creation is managed by your administrator. Please contact
+              your admin to receive login credentials.
+            </Text>
+          </div>
+          <a
+            href="/auth/login"
+            className="text-link font-medium cursor-pointer"
+          >
+            Back to Login
+          </a>
+        </div>
+      </AuthFlowContainer>
+    );
   }
 
   return (

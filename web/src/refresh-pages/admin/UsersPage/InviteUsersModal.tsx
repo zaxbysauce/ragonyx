@@ -7,9 +7,12 @@ import { Disabled } from "@opal/core";
 import Modal, { BasicModalFooter } from "@/refresh-components/Modal";
 import InputChipField from "@/refresh-components/inputs/InputChipField";
 import type { ChipItem } from "@/refresh-components/inputs/InputChipField";
+import InputTypeIn from "@/refresh-components/inputs/InputTypeIn";
+import PasswordInputTypeIn from "@/refresh-components/inputs/PasswordInputTypeIn";
 import Text from "@/refresh-components/texts/Text";
 import { toast } from "@/hooks/useToast";
-import { inviteUsers } from "./svc";
+import { inviteUsers, createUserByAdmin } from "./svc";
+import { NEXT_PUBLIC_USE_USERNAME_AUTH } from "@/lib/constants";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -27,18 +30,94 @@ interface InviteUsersModalProps {
 }
 
 // ---------------------------------------------------------------------------
-// Component
+// Username Auth Create-User Form
 // ---------------------------------------------------------------------------
 
-export default function InviteUsersModal({
-  open,
-  onOpenChange,
-}: InviteUsersModalProps) {
+function UsernameCreateUserForm({
+  isSubmitting,
+  onSubmit,
+  onClose,
+}: {
+  isSubmitting: boolean;
+  onSubmit: (username: string, password: string) => void;
+  onClose: () => void;
+}) {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+
+  return (
+    <>
+      <Modal.Body>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1">
+            <Text as="label" mainUiBody text03>
+              Username
+            </Text>
+            <InputTypeIn
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="username"
+              data-testid="create-user-username"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Text as="label" mainUiBody text03>
+              Initial Password
+            </Text>
+            <PasswordInputTypeIn
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter initial password"
+              data-testid="create-user-password"
+            />
+          </div>
+        </div>
+      </Modal.Body>
+
+      <Modal.Footer>
+        <BasicModalFooter
+          cancel={
+            <Disabled disabled={isSubmitting}>
+              <Button prominence="tertiary" onClick={onClose}>
+                Cancel
+              </Button>
+            </Disabled>
+          }
+          submit={
+            <Disabled
+              disabled={
+                isSubmitting || username.trim() === "" || password.trim() === ""
+              }
+            >
+              <Button
+                onClick={() => onSubmit(username.trim(), password)}
+              >
+                Create User
+              </Button>
+            </Disabled>
+          }
+        />
+      </Modal.Footer>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Email Invite Form (original)
+// ---------------------------------------------------------------------------
+
+function EmailInviteForm({
+  isSubmitting,
+  onSubmit,
+  onClose,
+}: {
+  isSubmitting: boolean;
+  onSubmit: (emails: string[]) => void;
+  onClose: () => void;
+}) {
   const [chips, setChips] = useState<ChipItem[]>([]);
   const [inputValue, setInputValue] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  /** Parse a comma-separated string into de-duped ChipItems */
   function parseEmails(value: string, existing: ChipItem[]): ChipItem[] {
     const entries = value
       .split(",")
@@ -73,30 +152,7 @@ export default function InviteUsersModal({
     setChips((prev) => prev.filter((c) => c.id !== id));
   }
 
-  const handleClose = useCallback(() => {
-    onOpenChange(false);
-    // Reset state after close animation
-    setTimeout(() => {
-      setChips([]);
-      setInputValue("");
-      setIsSubmitting(false);
-    }, 200);
-  }, [onOpenChange]);
-
-  /** Intercept backdrop/ESC closes so state is always reset */
-  const handleOpenChange = useCallback(
-    (next: boolean) => {
-      if (!next) {
-        if (!isSubmitting) handleClose();
-      } else {
-        onOpenChange(next);
-      }
-    },
-    [handleClose, isSubmitting, onOpenChange]
-  );
-
-  async function handleInvite() {
-    // Flush any pending text in the input into chips synchronously
+  function handleSubmit() {
     const pending = inputValue.trim();
     const allChips = pending
       ? [...chips, ...parseEmails(pending, chips)]
@@ -114,11 +170,110 @@ export default function InviteUsersModal({
       return;
     }
 
+    onSubmit(validEmails);
+  }
+
+  return (
+    <>
+      <Modal.Body>
+        <InputChipField
+          chips={chips}
+          onRemoveChip={removeChip}
+          onAdd={addEmail}
+          value={inputValue}
+          onChange={setInputValue}
+          placeholder="Add an email and press enter"
+          layout="stacked"
+        />
+        {chips.some((c) => c.error) && (
+          <div className="flex items-center gap-1 pt-1">
+            <SvgAlertTriangle
+              size={14}
+              className="text-status-warning-05 shrink-0"
+            />
+            <Text secondaryBody text03>
+              Some email addresses are invalid and will be skipped.
+            </Text>
+          </div>
+        )}
+      </Modal.Body>
+
+      <Modal.Footer>
+        <BasicModalFooter
+          cancel={
+            <Disabled disabled={isSubmitting}>
+              <Button prominence="tertiary" onClick={onClose}>
+                Cancel
+              </Button>
+            </Disabled>
+          }
+          submit={
+            <Disabled
+              disabled={
+                isSubmitting ||
+                chips.length === 0 ||
+                chips.every((c) => c.error)
+              }
+            >
+              <Button onClick={handleSubmit}>Invite</Button>
+            </Disabled>
+          }
+        />
+      </Modal.Footer>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+export default function InviteUsersModal({
+  open,
+  onOpenChange,
+}: InviteUsersModalProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isUsernameAuth = NEXT_PUBLIC_USE_USERNAME_AUTH;
+
+  const handleClose = useCallback(() => {
+    onOpenChange(false);
+    setTimeout(() => {
+      setIsSubmitting(false);
+    }, 200);
+  }, [onOpenChange]);
+
+  const handleOpenChange = useCallback(
+    (next: boolean) => {
+      if (!next) {
+        if (!isSubmitting) handleClose();
+      } else {
+        onOpenChange(next);
+      }
+    },
+    [handleClose, isSubmitting, onOpenChange]
+  );
+
+  async function handleCreateUser(username: string, password: string) {
     setIsSubmitting(true);
     try {
-      await inviteUsers(validEmails);
+      await createUserByAdmin(username, password);
+      toast.success(`User "${username}" created successfully`);
+      handleClose();
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to create user"
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleInviteEmails(emails: string[]) {
+    setIsSubmitting(true);
+    try {
+      await inviteUsers(emails);
       toast.success(
-        `Invited ${validEmails.length} user${validEmails.length > 1 ? "s" : ""}`
+        `Invited ${emails.length} user${emails.length > 1 ? "s" : ""}`
       );
       handleClose();
     } catch (err) {
@@ -135,55 +290,23 @@ export default function InviteUsersModal({
       <Modal.Content width="sm" height="fit">
         <Modal.Header
           icon={SvgUsers}
-          title="Invite Users"
+          title={isUsernameAuth ? "Create User" : "Invite Users"}
           onClose={isSubmitting ? undefined : handleClose}
         />
 
-        <Modal.Body>
-          <InputChipField
-            chips={chips}
-            onRemoveChip={removeChip}
-            onAdd={addEmail}
-            value={inputValue}
-            onChange={setInputValue}
-            placeholder="Add an email and press enter"
-            layout="stacked"
+        {isUsernameAuth ? (
+          <UsernameCreateUserForm
+            isSubmitting={isSubmitting}
+            onSubmit={handleCreateUser}
+            onClose={handleClose}
           />
-          {chips.some((c) => c.error) && (
-            <div className="flex items-center gap-1 pt-1">
-              <SvgAlertTriangle
-                size={14}
-                className="text-status-warning-05 shrink-0"
-              />
-              <Text secondaryBody text03>
-                Some email addresses are invalid and will be skipped.
-              </Text>
-            </div>
-          )}
-        </Modal.Body>
-
-        <Modal.Footer>
-          <BasicModalFooter
-            cancel={
-              <Disabled disabled={isSubmitting}>
-                <Button prominence="tertiary" onClick={handleClose}>
-                  Cancel
-                </Button>
-              </Disabled>
-            }
-            submit={
-              <Disabled
-                disabled={
-                  isSubmitting ||
-                  chips.length === 0 ||
-                  chips.every((c) => c.error)
-                }
-              >
-                <Button onClick={handleInvite}>Invite</Button>
-              </Disabled>
-            }
+        ) : (
+          <EmailInviteForm
+            isSubmitting={isSubmitting}
+            onSubmit={handleInviteEmails}
+            onClose={handleClose}
           />
-        </Modal.Footer>
+        )}
       </Modal.Content>
     </Modal>
   );

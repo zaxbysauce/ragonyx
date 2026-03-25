@@ -4,7 +4,11 @@ import { AuthTypeMetadata } from "@/hooks/useAuthTypeMetadata";
 import LoginText from "@/app/auth/login/LoginText";
 import SignInButton from "@/app/auth/login/SignInButton";
 import EmailPasswordForm from "./EmailPasswordForm";
-import { AuthType, NEXT_PUBLIC_FORGOT_PASSWORD_ENABLED } from "@/lib/constants";
+import {
+  AuthType,
+  NEXT_PUBLIC_FORGOT_PASSWORD_ENABLED,
+  NEXT_PUBLIC_USE_USERNAME_AUTH,
+} from "@/lib/constants";
 import { useSendAuthRequiredMessage } from "@/lib/extension/utils";
 import Text from "@/refresh-components/texts/Text";
 import { Button } from "@opal/components";
@@ -35,7 +39,7 @@ export default function LoginPage({
 
   return (
     <div className="flex flex-col w-full justify-center">
-      {verified && (
+      {verified && !NEXT_PUBLIC_USE_USERNAME_AUTH && (
         <Message
           success
           close={false}
@@ -76,9 +80,10 @@ export default function LoginPage({
             </>
           )}
           <EmailPasswordForm shouldVerify={true} nextUrl={effectiveNextUrl} />
-          {NEXT_PUBLIC_FORGOT_PASSWORD_ENABLED && (
-            <Button href="/auth/forgot-password">Reset Password</Button>
-          )}
+          {NEXT_PUBLIC_FORGOT_PASSWORD_ENABLED &&
+            !NEXT_PUBLIC_USE_USERNAME_AUTH && (
+              <Button href="/auth/forgot-password">Reset Password</Button>
+            )}
         </div>
       )}
 
@@ -89,7 +94,7 @@ export default function LoginPage({
         </div>
       )}
 
-      {!hidePageRedirect && (
+      {!hidePageRedirect && !NEXT_PUBLIC_USE_USERNAME_AUTH && (
         <p className="text-center mt-4">
           Don&apos;t have an account?{" "}
           <span

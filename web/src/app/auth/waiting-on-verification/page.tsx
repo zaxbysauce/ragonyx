@@ -9,8 +9,13 @@ import { User } from "@/lib/types";
 import Text from "@/components/ui/text";
 import { RequestNewVerificationEmail } from "./RequestNewVerificationEmail";
 import Logo from "@/refresh-components/Logo";
+import { NEXT_PUBLIC_USE_USERNAME_AUTH } from "@/lib/constants";
 
 export default async function Page() {
+  // Username auth has no email verification flow
+  if (NEXT_PUBLIC_USE_USERNAME_AUTH) {
+    return redirect("/auth/login");
+  }
   // catch cases where the backend is completely unreachable here
   // without try / catch, will just raise an exception and the page
   // will not render

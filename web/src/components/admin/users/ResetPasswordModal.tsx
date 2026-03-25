@@ -56,7 +56,7 @@ export default function ResetPasswordModal({
           description={
             newPassword
               ? undefined
-              : `Are you sure you want to reset the password for ${user.email}?`
+              : `Are you sure you want to reset the password for ${user.username ?? user.email}?`
           }
         />
         <Modal.Body>

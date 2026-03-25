@@ -286,6 +286,15 @@ def get_user_by_email(email: str, db_session: Session) -> User | None:
     return user
 
 
+def get_user_by_username(username: str, db_session: Session) -> User | None:
+    """Case-insensitive username lookup."""
+    return (
+        db_session.query(User)
+        .filter(func.lower(User.username) == username.strip().lower())
+        .first()
+    )
+
+
 def fetch_user_by_id(db_session: Session, user_id: UUID) -> User | None:
     return db_session.query(User).filter(User.id == user_id).first()  # type: ignore
 

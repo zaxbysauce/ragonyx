@@ -78,6 +78,9 @@ export const NEXT_PUBLIC_FORGOT_PASSWORD_ENABLED =
   process.env.NEXT_PUBLIC_FORGOT_PASSWORD_ENABLED?.toLowerCase() === "true" &&
   !NEXT_PUBLIC_CLOUD_ENABLED;
 
+export const NEXT_PUBLIC_USE_USERNAME_AUTH =
+  process.env.NEXT_PUBLIC_USE_USERNAME_AUTH?.toLowerCase() === "true";
+
 export const NEXT_PUBLIC_TEST_ENV =
   process.env.NEXT_PUBLIC_TEST_ENV?.toLowerCase() === "true";
 

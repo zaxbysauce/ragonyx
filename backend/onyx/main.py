@@ -26,6 +26,7 @@ from sentry_sdk.integrations.starlette import StarletteIntegration
 from starlette.types import Lifespan
 
 from onyx import __version__
+from onyx.auth.bootstrap import seed_bootstrap_admin_if_needed
 from onyx.auth.schemas import UserCreate
 from onyx.auth.schemas import UserRead
 from onyx.auth.schemas import UserUpdate
@@ -368,6 +369,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa: ARG001
             # set up the file store (e.g. create bucket if needed). On multi-tenant,
             # this is done via IaC
             get_default_file_store().initialize()
+
+        # Seed bootstrap admin (admin/admin) on first boot if no users exist
+        await seed_bootstrap_admin_if_needed()
     else:
         setup_multitenant_onyx()
 

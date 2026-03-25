@@ -12,6 +12,13 @@ services:
   api_server:
     ports:
       - "8080:8080"
+    environment:
+      - USE_USERNAME_AUTH=${USE_USERNAME_AUTH:-true}
+      - REQUIRE_EMAIL_VERIFICATION=${REQUIRE_EMAIL_VERIFICATION:-false}
+      - PASSWORD_MIN_LENGTH=${PASSWORD_MIN_LENGTH:-1}
+      - PASSWORD_REQUIRE_UPPERCASE=${PASSWORD_REQUIRE_UPPERCASE:-false}
+      - PASSWORD_REQUIRE_DIGIT=${PASSWORD_REQUIRE_DIGIT:-false}
+      - PASSWORD_REQUIRE_SPECIAL_CHAR=${PASSWORD_REQUIRE_SPECIAL_CHAR:-false}
     deploy:
       resources:
         limits:

@@ -34,12 +34,19 @@ import type { User } from "@/lib/types";
 // ---------------------------------------------------------------------------
 
 function renderNameColumn(email: string, row: UserRow) {
+  // Prefer username over email for display, fall back to email
+  const displayName = row.personal_name ?? row.username ?? email;
+  const subtitle = row.personal_name
+    ? (row.username ?? email)
+    : row.username
+      ? email
+      : undefined;
   return (
     <Content
       sizePreset="main-ui"
       variant="section"
-      title={row.personal_name ?? email}
-      description={row.personal_name ? email : undefined}
+      title={displayName}
+      description={subtitle}
     />
   );
 }

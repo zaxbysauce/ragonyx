@@ -20,6 +20,8 @@ import { APIFormFieldState } from "@/refresh-components/form/types";
 import { SvgArrowRightCircle } from "@opal/icons";
 import { useCaptcha } from "@/lib/hooks/useCaptcha";
 import Spacer from "@/refresh-components/Spacer";
+import { NEXT_PUBLIC_USE_USERNAME_AUTH } from "@/lib/constants";
+import { useRouter } from "next/navigation";
 
 interface EmailPasswordFormProps {
   isSignup?: boolean;
@@ -39,7 +41,9 @@ export default function EmailPasswordForm({
   isJoin = false,
 }: EmailPasswordFormProps) {
   const { user, authTypeMetadata } = useUser();
+  const router = useRouter();
   const passwordMinLength = authTypeMetadata?.passwordMinLength ?? 8;
+  const isUsernameAuth = NEXT_PUBLIC_USE_USERNAME_AUTH;
   const [isWorking, setIsWorking] = useState<boolean>(false);
   const [apiStatus, setApiStatus] = useState<APIFormFieldState>("loading");
   const [showApiMessage, setShowApiMessage] = useState(false);
@@ -73,10 +77,12 @@ export default function EmailPasswordForm({
         validateOnChange={true}
         validateOnBlur={true}
         validationSchema={Yup.object().shape({
-          email: Yup.string()
-            .email()
-            .required()
-            .transform((value) => value.toLowerCase()),
+          email: isUsernameAuth
+            ? Yup.string().required("Username is required")
+            : Yup.string()
+                .email()
+                .required()
+                .transform((value) => value.toLowerCase()),
           password: Yup.string()
             .min(
               passwordMinLength,
@@ -85,8 +91,10 @@ export default function EmailPasswordForm({
             .required(),
         })}
         onSubmit={async (values: { email: string; password: string }) => {
-          // Ensure email is lowercase
-          const email: string = values.email.toLowerCase();
+          // For username auth, trim and lowercase; for email auth, lowercase
+          const email: string = isUsernameAuth
+            ? values.email.trim().toLowerCase()
+            : values.email.toLowerCase();
           setShowApiMessage(true);
           setApiStatus("loading");
           setErrorMessage("");
@@ -112,8 +120,9 @@ export default function EmailPasswordForm({
               const errorDetail = errorBody.detail;
               let errorMsg: string = "Unknown error";
               if (errorDetail === "REGISTER_USER_ALREADY_EXISTS") {
-                errorMsg =
-                  "An account already exists with the specified email.";
+                errorMsg = isUsernameAuth
+                  ? "An account already exists with the specified username."
+                  : "An account already exists with the specified email.";
               } else if (typeof errorDetail === "string" && errorDetail) {
                 errorMsg = errorDetail;
               }
@@ -134,6 +143,15 @@ export default function EmailPasswordForm({
           const loginResponse = await basicLogin(email, values.password);
           if (loginResponse.ok) {
             setApiStatus("success");
+
+            // Check if user must change their password (e.g. admin-assigned temp password)
+            if (
+              loginResponse.headers.get("x-must-change-password") === "true"
+            ) {
+              router.push("/change-password");
+              return;
+            }
+
             if (isSignup && shouldVerify) {
               await requestEmailVerification(email);
               // Use window.location.href to force a full page reload,
@@ -155,7 +173,9 @@ export default function EmailPasswordForm({
             const errorDetail: any = (await loginResponse.json()).detail;
             let errorMsg: string = "Unknown error";
             if (errorDetail === "LOGIN_BAD_CREDENTIALS") {
-              errorMsg = "Invalid email or password";
+              errorMsg = isUsernameAuth
+                ? "Invalid username or password"
+                : "Invalid email or password";
             } else if (errorDetail === "NO_WEB_LOGIN_AND_HAS_NO_PASSWORD") {
               errorMsg = "Create an account to set a password";
             } else if (typeof errorDetail === "string") {
@@ -177,7 +197,9 @@ export default function EmailPasswordForm({
                 name="email"
                 render={(field, helper, meta, state) => (
                   <FormField name="email" state={state} className="w-full">
-                    <FormField.Label>Email Address</FormField.Label>
+                    <FormField.Label>
+                      {isUsernameAuth ? "Username" : "Email Address"}
+                    </FormField.Label>
                     <FormField.Control>
                       <InputTypeIn
                         {...field}
@@ -189,7 +211,9 @@ export default function EmailPasswordForm({
                           }
                           field.onChange(e);
                         }}
-                        placeholder="email@yourcompany.com"
+                        placeholder={
+                          isUsernameAuth ? "username" : "email@yourcompany.com"
+                        }
                         onClear={() => helper.setValue("")}
                         data-testid="email"
                         variant={apiStatus === "error" ? "error" : undefined}

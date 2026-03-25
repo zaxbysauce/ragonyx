@@ -305,9 +305,21 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     role: Mapped[UserRole] = mapped_column(
         Enum(UserRole, native_enum=False, default=UserRole.BASIC)
     )
+    username: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+    must_change_password: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
     account_type: Mapped[AccountType | None] = mapped_column(
         Enum(AccountType, native_enum=False), nullable=True
     )
+
+    @validates("username")
+    def _normalize_username(self, _key: str, value: str | None) -> str | None:
+        if value is not None:
+            return value.strip().lower()
+        return value
 
     """
     Preferences probably should be in a separate table at some point, but for now
@@ -435,6 +447,15 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     def is_anonymous(self) -> bool:
         """Returns True if this is the anonymous user."""
         return str(self.id) == ANONYMOUS_USER_UUID
+
+    __table_args__ = (
+        Index(
+            "ix_user_username",
+            "username",
+            unique=True,
+            postgresql_where=text("username IS NOT NULL"),
+        ),
+    )
 
 
 class AccessToken(SQLAlchemyBaseAccessTokenTableUUID, Base):

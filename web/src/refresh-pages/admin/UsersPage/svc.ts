@@ -127,6 +127,20 @@ export async function inviteUsers(emails: string[]): Promise<void> {
   }
 }
 
+export async function createUserByAdmin(
+  username: string,
+  password: string
+): Promise<void> {
+  const res = await fetch("/api/manage/admin/create-user", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+  if (!res.ok) {
+    throw new Error(await parseErrorDetail(res, "Failed to create user"));
+  }
+}
+
 export async function resetPassword(
   email: string
 ): Promise<{ user_id: string; new_password: string }> {

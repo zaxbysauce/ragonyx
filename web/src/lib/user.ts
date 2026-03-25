@@ -117,7 +117,9 @@ export async function refreshToken(
 export function getUserDisplayName(user: User | null): string {
   // Prioritize custom personal name if set
   if (!!user?.personalization?.name) return user.personalization.name;
-  // Then, prioritize personal email
+  // Then, prioritize username (for username-auth deployments)
+  if (!!user?.username) return user.username;
+  // Then, fall back to email local part
   if (!!user?.email) {
     const atIndex = user.email.indexOf("@");
     if (atIndex > 0) {
@@ -138,8 +140,13 @@ export function getUserDisplayName(user: User | null): string {
  */
 export function getUserInitials(
   name: string | null,
-  email: string
+  email: string,
+  username?: string | null
 ): string | null {
+  // If username is available, treat it as a name source before email fallback
+  if (!name && username) {
+    name = username;
+  }
   if (name) {
     const words = name.trim().split(/\s+/);
     if (words.length >= 2) {

@@ -75,6 +75,25 @@ See guides below:
 
 
 
+## 🔐 Username Auth Mode
+
+This fork replaces email-based authentication with username/password auth, designed for air-gapped and intranet deployments where email/SMTP is unavailable.
+
+- **Default credentials:** `admin` / `admin` — created automatically on first boot when no users exist.
+- **Force-change on first login:** The bootstrap admin account has `must_change_password` set to `true`. The frontend will redirect to `/change-password` on first login.
+- **Self-signup is disabled:** All user accounts must be created by an admin via Settings > User Management.
+- **No email/SMTP required:** Email verification is disabled. Password resets are performed by admins who generate a new temporary password for the user.
+- **Password policy:** Defaults are relaxed for initial setup. Production deployments should re-enable complexity rules in `.env`:
+  ```
+  PASSWORD_MIN_LENGTH=8
+  PASSWORD_REQUIRE_UPPERCASE=true
+  PASSWORD_REQUIRE_DIGIT=true
+  PASSWORD_REQUIRE_SPECIAL_CHAR=true
+  ```
+- **To disable username auth** and revert to standard email-based auth, set `USE_USERNAME_AUTH=false` and `NEXT_PUBLIC_USE_USERNAME_AUTH=false` in your `.env`.
+
+
+
 ## 🔍 Other Notable Benefits
 Onyx is built for teams of all sizes, from individual users to the largest global enterprises.
 

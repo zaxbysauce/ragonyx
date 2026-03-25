@@ -33,7 +33,9 @@ from onyx.auth.users import current_admin_user
 from onyx.auth.users import current_curator_or_admin_user
 from onyx.auth.users import current_user
 from onyx.auth.users import enforce_seat_limit
+from onyx.auth.users import get_user_manager
 from onyx.auth.users import optional_user
+from onyx.auth.users import UserManager
 from onyx.configs.app_configs import AUTH_BACKEND
 from onyx.configs.app_configs import AUTH_TYPE
 from onyx.configs.app_configs import AuthBackend
@@ -517,6 +519,72 @@ def bulk_invite_users(
         invited_count=number_of_invited_users,
         email_invite_status=email_invite_status,
     )
+
+
+class AdminCreateUserRequest(BaseModel):
+    username: str
+    password: str
+
+
+@router.post("/manage/admin/create-user", tags=PUBLIC_API_TAGS)
+async def admin_create_user(
+    request: AdminCreateUserRequest,
+    _: User = Depends(current_admin_user),
+    user_manager: "UserManager" = Depends(get_user_manager),
+    db_session: Session = Depends(get_session),
+) -> FullUserSnapshot:
+    """Create a new user by admin (username-auth mode).
+    The user is created with must_change_password=True so they are forced
+    to set their own password on first login."""
+    from onyx.configs.app_configs import USE_USERNAME_AUTH
+
+    if not USE_USERNAME_AUTH:
+        raise HTTPException(
+            status_code=400,
+            detail="This endpoint is only available in username auth mode.",
+        )
+
+    username = request.username.strip().lower()
+    if not username:
+        raise HTTPException(status_code=400, detail="Username is required.")
+
+    from onyx.db.users import get_user_by_username
+
+    existing = get_user_by_username(username, db_session)
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"A user with username '{username}' already exists.",
+        )
+
+    synthetic_email = f"{username}@local.invalid"
+    existing_email = get_user_by_email(synthetic_email, db_session)
+    if existing_email:
+        raise HTTPException(
+            status_code=400,
+            detail=f"A user with username '{username}' already exists.",
+        )
+
+    from onyx.auth.schemas import UserCreate
+
+    user_create = UserCreate(
+        email=synthetic_email,
+        password=request.password,
+        username=username,
+        role=UserRole.BASIC,
+    )
+
+    try:
+        created_user = await user_manager.create(user_create, safe=True)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Set must_change_password flag so user is forced to change on first login
+    created_user.must_change_password = True
+    db_session.add(created_user)
+    db_session.commit()
+
+    return FullUserSnapshot.from_user_model(created_user)
 
 
 @router.patch("/manage/admin/remove-invited-user", tags=PUBLIC_API_TAGS)

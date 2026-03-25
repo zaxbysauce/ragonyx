@@ -76,6 +76,14 @@ services:
     environment:
       # Auth Settings
       - AUTH_TYPE=${AUTH_TYPE:-basic}
+      - USE_USERNAME_AUTH=${USE_USERNAME_AUTH:-true}
+      - REQUIRE_EMAIL_VERIFICATION=${REQUIRE_EMAIL_VERIFICATION:-false}
+      # Password policy — relaxed defaults for bootstrap admin compatibility.
+      # Production deployments should re-enable these in .env.
+      - PASSWORD_MIN_LENGTH=${PASSWORD_MIN_LENGTH:-1}
+      - PASSWORD_REQUIRE_UPPERCASE=${PASSWORD_REQUIRE_UPPERCASE:-false}
+      - PASSWORD_REQUIRE_DIGIT=${PASSWORD_REQUIRE_DIGIT:-false}
+      - PASSWORD_REQUIRE_SPECIAL_CHAR=${PASSWORD_REQUIRE_SPECIAL_CHAR:-false}
       - FILE_STORE_BACKEND=${FILE_STORE_BACKEND:-s3}
       - POSTGRES_HOST=${POSTGRES_HOST:-relational_db}
       - VESPA_HOST=${VESPA_HOST:-index}
@@ -214,6 +222,7 @@ services:
       args:
         - NEXT_PUBLIC_DISABLE_LOGOUT=${NEXT_PUBLIC_DISABLE_LOGOUT:-}
         - NEXT_PUBLIC_FORGOT_PASSWORD_ENABLED=${NEXT_PUBLIC_FORGOT_PASSWORD_ENABLED:-}
+        - NEXT_PUBLIC_USE_USERNAME_AUTH=${NEXT_PUBLIC_USE_USERNAME_AUTH:-true}
         # Enterprise Edition only
         - NEXT_PUBLIC_THEME=${NEXT_PUBLIC_THEME:-}
         # DO NOT TURN ON unless you have EXPLICIT PERMISSION from Onyx.

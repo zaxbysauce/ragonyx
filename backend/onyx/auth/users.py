@@ -97,6 +97,7 @@ from onyx.configs.app_configs import REQUIRE_EMAIL_VERIFICATION
 from onyx.configs.app_configs import SESSION_EXPIRE_TIME_SECONDS
 from onyx.configs.app_configs import TRACK_EXTERNAL_IDP_EXPIRY
 from onyx.configs.app_configs import USER_AUTH_SECRET
+from onyx.configs.app_configs import USE_USERNAME_AUTH
 from onyx.configs.app_configs import VALID_EMAIL_DOMAINS
 from onyx.configs.app_configs import WEB_DOMAIN
 from onyx.configs.constants import ANONYMOUS_USER_COOKIE_NAME
@@ -126,6 +127,7 @@ from onyx.db.models import Persona
 from onyx.db.models import User
 from onyx.db.pat import fetch_user_for_pat
 from onyx.db.users import get_user_by_email
+from onyx.db.users import get_user_by_username
 from onyx.error_handling.error_codes import OnyxErrorCode
 from onyx.error_handling.exceptions import log_onyx_error
 from onyx.error_handling.exceptions import onyx_error_to_json_response
@@ -405,21 +407,22 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
 
         # Check for disposable emails BEFORE provisioning tenant
         # This prevents creating tenants for throwaway email addresses
-        try:
-            verify_email_domain(user_create.email, is_registration=True)
-        except OnyxError as e:
-            # Log blocked disposable email attempts
-            if "Disposable email" in e.detail:
-                domain = (
-                    user_create.email.split("@")[-1]
-                    if "@" in user_create.email
-                    else "unknown"
-                )
-                logger.warning(
-                    f"Blocked disposable email registration attempt: {domain}",
-                    extra={"email_domain": domain},
-                )
-            raise
+        if not USE_USERNAME_AUTH:
+            try:
+                verify_email_domain(user_create.email, is_registration=True)
+            except OnyxError as e:
+                # Log blocked disposable email attempts
+                if "Disposable email" in e.detail:
+                    domain = (
+                        user_create.email.split("@")[-1]
+                        if "@" in user_create.email
+                        else "unknown"
+                    )
+                    logger.warning(
+                        f"Blocked disposable email registration attempt: {domain}",
+                        extra={"email_domain": domain},
+                    )
+                raise
 
         user_count: int | None = None
         referral_source = (
@@ -468,6 +471,14 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
                         or user_create.email in get_default_admin_user_emails()
                     ):
                         user_create.role = UserRole.ADMIN
+
+                if USE_USERNAME_AUTH and hasattr(user_create, "username") and user_create.username:
+                    # username was provided explicitly (admin-created user)
+                    pass
+                elif USE_USERNAME_AUTH:
+                    # Derive username from email local-part if not provided
+                    local_part = user_create.email.split("@")[0]
+                    user_create.username = local_part.lower()
 
                 # Check seat availability for new users (single-tenant only)
                 with get_session_with_current_tenant() as sync_db:
@@ -794,6 +805,11 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
             properties={"email": user.email, "tenant_id": tenant_id},
         )
 
+        # If the user must change their password (e.g. bootstrap admin),
+        # signal the frontend via a response header.
+        if getattr(user, "must_change_password", False) and response:
+            response.headers["X-Must-Change-Password"] = "true"
+
     async def on_after_register(
         self, user: User, request: Optional[Request] = None
     ) -> None:
@@ -903,6 +919,13 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         token: str,
         request: Optional[Request] = None,  # noqa: ARG002
     ) -> None:
+        if USE_USERNAME_AUTH:
+            # Password reset via email is not supported in username auth mode
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "Password reset via email is not available in username auth mode. "
+                "Contact an administrator to reset your password.",
+            )
         if not EMAIL_CONFIGURED:
             logger.error(
                 "Email is not configured. Please configure email in the admin panel"
@@ -925,6 +948,10 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         token: str,
         request: Optional[Request] = None,  # noqa: ARG002
     ) -> None:
+        if USE_USERNAME_AUTH:
+            # Email verification is not needed in username auth mode
+            return
+
         verify_email_domain(user.email)
 
         logger.notice(
@@ -939,7 +966,16 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     async def authenticate(
         self, credentials: OAuth2PasswordRequestForm
     ) -> Optional[User]:
-        email = credentials.username
+        if USE_USERNAME_AUTH:
+            # credentials.username is the username field from the login form
+            raw_username = credentials.username.strip().lower()
+            if not raw_username:
+                self.password_helper.hash(credentials.password)
+                return None
+            synthetic_email = f"{raw_username}@local.invalid"
+            email = synthetic_email
+        else:
+            email = credentials.username
 
         tenant_id: str | None = None
         try:
@@ -972,8 +1008,29 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
                 user = await self.get_by_email(email)
 
             except exceptions.UserNotExists:
-                self.password_helper.hash(credentials.password)
-                return None
+                if USE_USERNAME_AUTH:
+                    # Try lookup by username column directly (async)
+                    from sqlalchemy import func as sa_func
+
+                    result = await tenant_session.execute(
+                        select(User).where(
+                            sa_func.lower(User.username) == raw_username
+                        )
+                    )
+                    user_by_name = result.scalars().first()
+                    if user_by_name is None:
+                        self.password_helper.hash(credentials.password)
+                        return None
+                    # Found by username — re-derive email and continue
+                    email = user_by_name.email
+                    try:
+                        user = await self.get_by_email(email)
+                    except exceptions.UserNotExists:
+                        self.password_helper.hash(credentials.password)
+                        return None
+                else:
+                    self.password_helper.hash(credentials.password)
+                    return None
 
             if not user.role.is_web_login():
                 raise BasicAuthenticationError(
@@ -1767,7 +1824,7 @@ async def current_user_from_websocket(
 
 
 def get_default_admin_user_emails_() -> list[str]:
-    # No default seeding available for Onyx MIT
+    # Replaced by seed_bootstrap_admin() — this is intentionally empty
     return []
 
 
