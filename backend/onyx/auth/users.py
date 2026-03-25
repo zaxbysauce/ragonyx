@@ -1083,6 +1083,10 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         # Now apply and validate the new password
         await self._update(user, {"password": new_password})
 
+        # Clear the must_change_password flag after a successful change
+        if getattr(user, "must_change_password", False):
+            await self.user_db.update(user, {"must_change_password": False})
+
 
 async def get_user_manager(
     user_db: SQLAlchemyUserDatabase = Depends(get_user_db),

@@ -579,10 +579,10 @@ async def admin_create_user(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    # Set must_change_password flag so user is forced to change on first login
-    created_user.must_change_password = True
-    db_session.add(created_user)
-    db_session.commit()
+    # Set must_change_password flag via the async user_db (same session as create)
+    await user_manager.user_db.update(
+        created_user, {"must_change_password": True}
+    )
 
     return FullUserSnapshot.from_user_model(created_user)
 

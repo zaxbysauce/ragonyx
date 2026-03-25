@@ -83,12 +83,14 @@ export default function EmailPasswordForm({
                 .email()
                 .required()
                 .transform((value) => value.toLowerCase()),
-          password: Yup.string()
-            .min(
-              passwordMinLength,
-              `Password must be at least ${passwordMinLength} characters`
-            )
-            .required(),
+          password: isSignup
+            ? Yup.string()
+                .min(
+                  passwordMinLength,
+                  `Password must be at least ${passwordMinLength} characters`
+                )
+                .required()
+            : Yup.string().required("Password is required"),
         })}
         onSubmit={async (values: { email: string; password: string }) => {
           // For username auth, trim and lowercase; for email auth, lowercase
@@ -148,11 +150,11 @@ export default function EmailPasswordForm({
             if (
               loginResponse.headers.get("x-must-change-password") === "true"
             ) {
-              router.push("/change-password");
+              router.push("/auth/change-password");
               return;
             }
 
-            if (isSignup && shouldVerify) {
+            if (isSignup && shouldVerify && !isUsernameAuth) {
               await requestEmailVerification(email);
               // Use window.location.href to force a full page reload,
               // ensuring app re-initializes with the new state (including
