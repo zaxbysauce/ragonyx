@@ -13,6 +13,7 @@ import Text from "@/refresh-components/texts/Text";
 import { toast } from "@/hooks/useToast";
 import { inviteUsers, createUserByAdmin } from "./svc";
 import { NEXT_PUBLIC_USE_USERNAME_AUTH } from "@/lib/constants";
+import { useUser } from "@/providers/UserProvider";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -233,7 +234,9 @@ export default function InviteUsersModal({
   onOpenChange,
 }: InviteUsersModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const isUsernameAuth = NEXT_PUBLIC_USE_USERNAME_AUTH;
+  const { authTypeMetadata } = useUser();
+  const isUsernameAuth =
+    authTypeMetadata?.useUsernameAuth ?? NEXT_PUBLIC_USE_USERNAME_AUTH;
 
   const handleClose = useCallback(() => {
     onOpenChange(false);

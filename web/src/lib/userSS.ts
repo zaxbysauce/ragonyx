@@ -12,6 +12,7 @@ export interface AuthTypeMetadata {
   passwordMinLength: number;
   hasUsers: boolean;
   oauthEnabled: boolean;
+  useUsernameAuth: boolean;
 }
 
 export const getAuthTypeMetadataSS = async (): Promise<AuthTypeMetadata> => {
@@ -27,6 +28,7 @@ export const getAuthTypeMetadataSS = async (): Promise<AuthTypeMetadata> => {
     password_min_length: number;
     has_users: boolean;
     oauth_enabled: boolean;
+    use_username_auth: boolean;
   } = await res.json();
 
   let authType: AuthType;
@@ -49,6 +51,7 @@ export const getAuthTypeMetadataSS = async (): Promise<AuthTypeMetadata> => {
       passwordMinLength: data.password_min_length,
       hasUsers: data.has_users,
       oauthEnabled: data.oauth_enabled,
+      useUsernameAuth: data.use_username_auth ?? false,
     };
   }
   return {
@@ -59,6 +62,7 @@ export const getAuthTypeMetadataSS = async (): Promise<AuthTypeMetadata> => {
     passwordMinLength: data.password_min_length,
     hasUsers: data.has_users,
     oauthEnabled: data.oauth_enabled,
+    useUsernameAuth: data.use_username_auth ?? false,
   };
 };
 

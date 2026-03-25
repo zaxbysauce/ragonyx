@@ -61,6 +61,7 @@ class AuthTypeResponse(BaseModel):
     # whether there are any users in the system
     has_users: bool = True
     oauth_enabled: bool = False
+    use_username_auth: bool = False
 
 
 class UserSpecificAssistantPreference(BaseModel):

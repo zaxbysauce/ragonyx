@@ -60,7 +60,7 @@ const Page = async (props: {
     authUrl = await getAuthUrlSS(authTypeMetadata.authType, null);
   }
 
-  if (NEXT_PUBLIC_USE_USERNAME_AUTH) {
+  if (authTypeMetadata?.useUsernameAuth ?? NEXT_PUBLIC_USE_USERNAME_AUTH) {
     return (
       <AuthFlowContainer authState="signup">
         <div className="flex w-full flex-col justify-start gap-6">

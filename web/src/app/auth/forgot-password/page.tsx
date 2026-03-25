@@ -17,11 +17,15 @@ import {
   NEXT_PUBLIC_FORGOT_PASSWORD_ENABLED,
   NEXT_PUBLIC_USE_USERNAME_AUTH,
 } from "@/lib/constants";
+import { useUser } from "@/providers/UserProvider";
 
 const ForgotPasswordPage: React.FC = () => {
   const [isWorking, setIsWorking] = useState(false);
+  const { authTypeMetadata } = useUser();
+  const isUsernameAuth =
+    authTypeMetadata?.useUsernameAuth ?? NEXT_PUBLIC_USE_USERNAME_AUTH;
 
-  if (!NEXT_PUBLIC_FORGOT_PASSWORD_ENABLED || NEXT_PUBLIC_USE_USERNAME_AUTH) {
+  if (!NEXT_PUBLIC_FORGOT_PASSWORD_ENABLED || isUsernameAuth) {
     redirect("/auth/login");
   }
 

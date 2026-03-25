@@ -43,7 +43,9 @@ export default function EmailPasswordForm({
   const { user, authTypeMetadata } = useUser();
   const router = useRouter();
   const passwordMinLength = authTypeMetadata?.passwordMinLength ?? 8;
-  const isUsernameAuth = NEXT_PUBLIC_USE_USERNAME_AUTH;
+  // Runtime API value takes priority; build-time env var is fallback
+  const isUsernameAuth =
+    authTypeMetadata?.useUsernameAuth ?? NEXT_PUBLIC_USE_USERNAME_AUTH;
   const [isWorking, setIsWorking] = useState<boolean>(false);
   const [apiStatus, setApiStatus] = useState<APIFormFieldState>("loading");
   const [showApiMessage, setShowApiMessage] = useState(false);

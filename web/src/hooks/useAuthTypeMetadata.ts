@@ -8,6 +8,7 @@ interface AuthTypeAPIResponse {
   password_min_length: number;
   has_users: boolean;
   oauth_enabled: boolean;
+  use_username_auth: boolean;
 }
 
 export interface AuthTypeMetadata {
@@ -18,6 +19,7 @@ export interface AuthTypeMetadata {
   passwordMinLength: number;
   hasUsers: boolean;
   oauthEnabled: boolean;
+  useUsernameAuth: boolean;
 }
 
 const DEFAULT_AUTH_TYPE_METADATA: AuthTypeMetadata = {
@@ -28,6 +30,7 @@ const DEFAULT_AUTH_TYPE_METADATA: AuthTypeMetadata = {
   passwordMinLength: 0,
   hasUsers: false,
   oauthEnabled: false,
+  useUsernameAuth: false,
 };
 
 async function fetchAuthTypeMetadata(url: string): Promise<AuthTypeMetadata> {
@@ -45,6 +48,7 @@ async function fetchAuthTypeMetadata(url: string): Promise<AuthTypeMetadata> {
     passwordMinLength: data.password_min_length,
     hasUsers: data.has_users,
     oauthEnabled: data.oauth_enabled,
+    useUsernameAuth: data.use_username_auth ?? false,
   };
 }
 

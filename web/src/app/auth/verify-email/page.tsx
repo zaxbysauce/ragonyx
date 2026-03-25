@@ -22,6 +22,11 @@ export default async function Page() {
     console.log(`Some fetch failed for the login page - ${e}`);
   }
 
+  // Username auth has no email verification flow
+  if (authTypeMetadata?.useUsernameAuth) {
+    return redirect("/auth/login");
+  }
+
   if (!authTypeMetadata?.requiresVerification || currentUser?.is_verified) {
     return redirect("/app");
   }

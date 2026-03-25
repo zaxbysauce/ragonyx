@@ -33,13 +33,17 @@ export default function LoginPage({
 }: LoginPageProps) {
   useSendAuthRequiredMessage();
 
+  // Runtime API value takes priority; build-time env var is fallback
+  const isUsernameAuth =
+    authTypeMetadata?.useUsernameAuth ?? NEXT_PUBLIC_USE_USERNAME_AUTH;
+
   // Honor any existing nextUrl; only default to new team flow for first users with no nextUrl
   const effectiveNextUrl =
     nextUrl ?? (isFirstUser ? "/app?new_team=true" : null);
 
   return (
     <div className="flex flex-col w-full justify-center">
-      {verified && !NEXT_PUBLIC_USE_USERNAME_AUTH && (
+      {verified && !isUsernameAuth && (
         <Message
           success
           close={false}
@@ -81,7 +85,7 @@ export default function LoginPage({
           )}
           <EmailPasswordForm shouldVerify={true} nextUrl={effectiveNextUrl} />
           {NEXT_PUBLIC_FORGOT_PASSWORD_ENABLED &&
-            !NEXT_PUBLIC_USE_USERNAME_AUTH && (
+            !isUsernameAuth && (
               <Button href="/auth/forgot-password">Reset Password</Button>
             )}
         </div>
@@ -94,7 +98,7 @@ export default function LoginPage({
         </div>
       )}
 
-      {!hidePageRedirect && !NEXT_PUBLIC_USE_USERNAME_AUTH && (
+      {!hidePageRedirect && !isUsernameAuth && (
         <p className="text-center mt-4">
           Don&apos;t have an account?{" "}
           <span
